@@ -1,14 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useCourses, COURSE_CATEGORIES } from '@/hooks/useCourses';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Heart, Users, Award, LogOut, User, Settings } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BookOpen, Heart, Users, Award, LogOut, User, Settings, Filter } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
+import { CourseCard } from '@/components/CourseCard';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const { user, profile, loading, signOut } = useAuth();
+  const { courses, loading: coursesLoading } = useCourses();
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   const getRoleLabel = (role: string) => {
@@ -22,6 +29,30 @@ const Index = () => {
       default:
         return { label: 'Usuário', variant: 'outline' as const };
     }
+  };
+
+  const filteredCourses = selectedCategory === 'Todos' 
+    ? courses 
+    : courses.filter(course => 
+        course.tags?.some(tag => tag.toLowerCase().includes(selectedCategory.toLowerCase()))
+      );
+
+  const handleEnroll = (courseId: string) => {
+    if (!user) {
+      toast({
+        title: "Login necessário",
+        description: "Você precisa fazer login para se inscrever em um curso.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+    
+    toast({
+      title: "Inscrição iniciada",
+      description: "Redirecionando para o processo de inscrição...",
+    });
+    // TODO: Implementar lógica de inscrição
   };
 
   if (loading) {
@@ -253,6 +284,71 @@ const Index = () => {
                   </CardDescription>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Seção de Cursos Disponíveis */}
+            <div className="space-y-6">
+              <div className="text-center space-y-4">
+                <h2 className="text-3xl font-bold">Cursos Disponíveis</h2>
+                <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                  Descubra cursos que vão transformar seu ministério e aprofundar sua fé
+                </p>
+              </div>
+
+              <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+                <div className="flex justify-center mb-6">
+                  <TabsList className="grid grid-cols-5 lg:grid-cols-6 w-full max-w-4xl h-auto">
+                    <TabsTrigger value="Todos" className="text-xs py-2">Todos</TabsTrigger>
+                    {COURSE_CATEGORIES.slice(0, 5).map((category) => (
+                      <TabsTrigger key={category} value={category} className="text-xs py-2">
+                        {category}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+
+                <TabsContent value={selectedCategory} className="space-y-6">
+                  {coursesLoading ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {[...Array(6)].map((_, i) => (
+                        <Card key={i} className="animate-pulse">
+                          <div className="aspect-video bg-muted"></div>
+                          <CardHeader>
+                            <div className="h-6 bg-muted rounded"></div>
+                            <div className="h-4 bg-muted rounded w-3/4"></div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <div className="h-4 bg-muted rounded"></div>
+                              <div className="h-4 bg-muted rounded w-1/2"></div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : filteredCourses.length > 0 ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredCourses.map((course) => (
+                        <CourseCard
+                          key={course.id}
+                          course={course}
+                          onEnroll={handleEnroll}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Nenhum curso encontrado</h3>
+                      <p className="text-muted-foreground">
+                        {selectedCategory === 'Todos' 
+                          ? 'Ainda não há cursos disponíveis.' 
+                          : `Não há cursos na categoria "${selectedCategory}".`}
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         )}
