@@ -195,7 +195,7 @@ const Index = () => {
                 </>
               )}
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/courses')}>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <BookOpen className="h-5 w-5" />
@@ -236,8 +236,10 @@ const Index = () => {
                     Começar Agora
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg">
-                  Explorar Cursos
+                <Button variant="outline" size="lg" asChild>
+                  <Link to="/courses">
+                    Explorar Cursos
+                  </Link>
                 </Button>
               </div>
             </div>
