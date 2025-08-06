@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Criar Superadmin</title>
+</head>
+<body>
+    <h1>Criando usuário superadmin...</h1>
+    <div id="result"></div>
+
+    <script>
+        fetch('https://ippimoepciqlmlxigvja.supabase.co/functions/v1/create-superadmin', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwcGltb2VwY2lxbG1seGlndmphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzMTkzMzYsImV4cCI6MjA2OTg5NTMzNn0.d1xcU9in9VAOh8r4Zbkn8eZYNZnkxriJvwyCijBL7fU',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        })
+        .catch(error => {
+            document.getElementById('result').innerHTML = '<pre>Error: ' + error.message + '</pre>';
+        });
+    </script>
+</body>
+</html>
