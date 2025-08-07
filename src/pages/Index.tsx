@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourses, COURSE_CATEGORIES } from '@/hooks/useCourses';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -127,7 +128,7 @@ const Index = () => {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {profile.role === 'superadmin' && (
                 <>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/admin')}>
                     <CardHeader>
                       <CardTitle className="flex items-center space-x-2">
                         <Settings className="h-5 w-5" />
@@ -139,7 +140,7 @@ const Index = () => {
                     </CardHeader>
                   </Card>
                   
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/admin')}>
                     <CardHeader>
                       <CardTitle className="flex items-center space-x-2">
                         <Users className="h-5 w-5" />
@@ -154,7 +155,7 @@ const Index = () => {
               )}
 
               {(profile.role === 'superadmin' || profile.role === 'professor') && (
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/professor')}>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <BookOpen className="h-5 w-5" />
@@ -169,7 +170,7 @@ const Index = () => {
 
               {profile.role === 'aluno' && (
                 <>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/student')}>
                     <CardHeader>
                       <CardTitle className="flex items-center space-x-2">
                         <BookOpen className="h-5 w-5" />
@@ -181,7 +182,7 @@ const Index = () => {
                     </CardHeader>
                   </Card>
                   
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/student')}>
                     <CardHeader>
                       <CardTitle className="flex items-center space-x-2">
                         <Award className="h-5 w-5" />
@@ -227,21 +228,55 @@ const Index = () => {
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                 Uma plataforma completa de cursos online voltada para formações com propósito social 
-                e voluntariado cristão, onde você pode aprender, ensinar e fazer a diferença.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" asChild>
-                  <Link to="/auth">
-                    Começar Agora
-                  </Link>
-                </Button>
-                <Button variant="outline" size="lg" asChild>
-                  <Link to="/courses">
-                    Explorar Cursos
-                  </Link>
-                </Button>
-              </div>
+                 e voluntariado cristão, onde você pode aprender, ensinar e fazer a diferença.
+               </p>
+               
+               <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                 <Button size="lg" asChild>
+                   <Link to="/auth">
+                     Começar Agora
+                   </Link>
+                 </Button>
+                 <Button variant="outline" size="lg" asChild>
+                   <Link to="/courses">
+                     Explorar Cursos
+                   </Link>
+                 </Button>
+               </div>
+               
+               {/* Botão temporário para criar superadmin - apenas durante desenvolvimento */}
+               <div className="flex justify-center">
+                 <Button 
+                   variant="ghost" 
+                   size="sm" 
+                   onClick={async () => {
+                     try {
+                       const { data, error } = await supabase.functions.invoke('create-superadmin');
+                       if (error) {
+                         toast({
+                           title: "Erro",
+                           description: error.message,
+                           variant: "destructive"
+                         });
+                       } else {
+                         toast({
+                           title: "Sucesso",
+                           description: "Superadmin criado! Email: tmidiamkt@gmail.com | Senha: Tmidia_202S"
+                         });
+                       }
+                     } catch (error: any) {
+                       toast({
+                         title: "Erro",
+                         description: error.message || "Erro inesperado",
+                         variant: "destructive"
+                       });
+                     }
+                   }}
+                   className="text-xs opacity-50 hover:opacity-100"
+                 >
+                   Criar Superadmin (Dev)
+                 </Button>
+               </div>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
