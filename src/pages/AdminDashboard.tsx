@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Users, 
   BookOpen, 
@@ -15,12 +17,43 @@ import {
   UserPlus,
   GraduationCap,
   Trophy,
-  DollarSign
+  DollarSign,
+  Shield
 } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isCreatingSuperadmin, setIsCreatingSuperadmin] = useState(false);
+
+  const createSuperadmin = async () => {
+    setIsCreatingSuperadmin(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-superadmin');
+      
+      if (error) {
+        toast({
+          title: "Erro",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Usuário superadmin criado com sucesso!"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao criar superadmin",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingSuperadmin(false);
+    }
+  };
 
   useEffect(() => {
     if (!user || !profile || profile.role !== 'superadmin') {
@@ -563,21 +596,36 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Configurações de Segurança</CardTitle>
-                  <CardDescription>
-                    Configure políticas de segurança
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Autenticação de Dois Fatores</p>
-                      <p className="text-sm text-muted-foreground">Obrigatória para professores</p>
-                    </div>
-                    <Button variant="outline" size="sm">Ativar</Button>
-                  </div>
+               <Card>
+                 <CardHeader>
+                   <CardTitle>Configurações de Segurança</CardTitle>
+                   <CardDescription>
+                     Configure políticas de segurança
+                   </CardDescription>
+                 </CardHeader>
+                 <CardContent className="space-y-4">
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <p className="font-medium">Criar Superadmin</p>
+                       <p className="text-sm text-muted-foreground">Crie o usuário superadmin inicial</p>
+                     </div>
+                     <Button 
+                       variant="outline" 
+                       size="sm" 
+                       onClick={createSuperadmin}
+                       disabled={isCreatingSuperadmin}
+                     >
+                       <Shield className="h-4 w-4 mr-2" />
+                       {isCreatingSuperadmin ? 'Criando...' : 'Criar Superadmin'}
+                     </Button>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <p className="font-medium">Autenticação de Dois Fatores</p>
+                       <p className="text-sm text-muted-foreground">Obrigatória para professores</p>
+                     </div>
+                     <Button variant="outline" size="sm">Ativar</Button>
+                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Backup Automático</p>
