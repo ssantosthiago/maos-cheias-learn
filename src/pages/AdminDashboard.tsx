@@ -30,24 +30,34 @@ const AdminDashboard = () => {
   const createSuperadmin = async () => {
     setIsCreatingSuperadmin(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-superadmin');
+      console.log('Invoking create-superadmin function...');
+      const { data, error } = await supabase.functions.invoke('create-superadmin', {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      console.log('Function response:', { data, error });
       
       if (error) {
+        console.error('Function error:', error);
         toast({
           title: "Erro",
-          description: error.message,
+          description: `Erro na função: ${error.message}`,
           variant: "destructive"
         });
       } else {
+        console.log('Success:', data);
         toast({
           title: "Sucesso",
-          description: "Usuário superadmin criado com sucesso!"
+          description: "Usuário superadmin criado com sucesso! Email: tmidiamkt@gmail.com, Senha: Tmidia_202S"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Unexpected error:', error);
       toast({
         title: "Erro",
-        description: "Erro inesperado ao criar superadmin",
+        description: `Erro inesperado: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive"
       });
     } finally {
