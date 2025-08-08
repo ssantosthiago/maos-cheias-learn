@@ -24,57 +24,86 @@ serve(async (req) => {
       }
     )
 
-    // Create the superadmin user
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: 'tmidiamkt@gmail.com',
-      password: 'Tmidia_202S',
-      email_confirm: true,
-      user_metadata: {
-        full_name: 'Super Admin'
-      }
-    })
+    const email = 'tmidiamkt@gmail.com'
+    const password = 'Tmidia_202S'
 
-    if (authError) {
-      console.error('Error creating auth user:', authError)
+    // Try to find an existing user by email to make this function idempotent
+    let targetUser: any = null
+    try {
+      const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+      if (listError) {
+        console.error('Error listing users:', listError)
+      } else {
+        targetUser = usersData?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase()) || null
+      }
+    } catch (e) {
+      console.error('Unexpected error while listing users:', e)
+    }
+
+    // Create the superadmin user if it doesn't exist yet
+    if (!targetUser) {
+      const { data: createdData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: 'Super Admin'
+        }
+      })
+
+      if (createError) {
+        console.error('Error creating auth user:', createError)
+        return new Response(
+          JSON.stringify({ error: createError.message }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      targetUser = createdData?.user
+    }
+
+    if (!targetUser) {
+      console.error('No user available after creation or lookup')
       return new Response(
-        JSON.stringify({ error: authError.message }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        JSON.stringify({ error: 'Não foi possível obter o usuário administrador.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Ensure profile exists and has superadmin role (upsert for idempotency)
+    const { error: upsertError } = await supabaseAdmin
+      .from('profiles')
+      .upsert(
+        {
+          user_id: targetUser.id,
+          role: 'superadmin',
+          full_name: 'Super Admin'
+        },
+        { onConflict: 'user_id' }
+      )
+
+    if (upsertError) {
+      console.error('Error upserting profile:', upsertError)
+      return new Response(
+        JSON.stringify({ error: upsertError.message }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
 
-    // Update the profile to have superadmin role
-    if (authData.user) {
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .update({ 
-          role: 'superadmin',
-          full_name: 'Super Admin'
-        })
-        .eq('user_id', authData.user.id)
-
-      if (profileError) {
-        console.error('Error updating profile:', profileError)
-        return new Response(
-          JSON.stringify({ error: profileError.message }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        )
-      }
-    }
-
     return new Response(
-      JSON.stringify({ 
-        message: 'Superadmin user created successfully',
-        user: authData.user 
+      JSON.stringify({
+        message: 'Superadmin pronto com sucesso',
+        user: { id: targetUser.id, email: targetUser.email }
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
 
@@ -82,9 +111,9 @@ serve(async (req) => {
     console.error('Unexpected error:', error)
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
   }
