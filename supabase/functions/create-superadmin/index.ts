@@ -6,13 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+type CreateAdminBody = {
+  email?: string
+  password?: string
+  full_name?: string
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Create admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -24,10 +29,55 @@ serve(async (req) => {
       }
     )
 
-    const email = 'tmidiamkt@gmail.com'
-    const password = 'Tmidia_202S'
+    // Block creation if a superadmin already exists
+    const { count: existingCount, error: countError } = await supabaseAdmin
+      .from('profiles')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('role', 'superadmin')
+      .eq('is_active', true)
 
-    // Try to find an existing user by email to make this function idempotent
+    if (countError) {
+      console.error('Error counting superadmins:', countError)
+      return new Response(
+        JSON.stringify({ error: countError.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if ((existingCount ?? 0) > 0) {
+      return new Response(
+        JSON.stringify({ error: 'Já existe um superadmin cadastrado.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Parse body for email/password/full_name
+    let body: CreateAdminBody = {}
+    try {
+      body = await req.json()
+    } catch (_) {
+      // ignore, will validate below
+    }
+
+    const email = (body.email || '').trim()
+    const password = body.password || ''
+    const full_name = (body.full_name || 'Super Admin').trim()
+
+    if (!email || !password) {
+      return new Response(
+        JSON.stringify({ error: 'E-mail e senha são obrigatórios.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (password.length < 8) {
+      return new Response(
+        JSON.stringify({ error: 'A senha deve ter pelo menos 8 caracteres.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check if the user already exists by email
     let targetUser: any = null
     try {
       const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
@@ -47,7 +97,7 @@ serve(async (req) => {
         password,
         email_confirm: true,
         user_metadata: {
-          full_name: 'Super Admin'
+          full_name
         }
       })
 
@@ -80,7 +130,9 @@ serve(async (req) => {
         {
           user_id: targetUser.id,
           role: 'superadmin',
-          full_name: 'Super Admin'
+          full_name,
+          email,
+          is_active: true
         },
         { onConflict: 'user_id' }
       )
@@ -98,7 +150,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        message: 'Superadmin pronto com sucesso',
+        message: 'Superadmin criado com sucesso',
         user: { id: targetUser.id, email: targetUser.email }
       }),
       {

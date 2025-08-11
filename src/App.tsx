@@ -13,6 +13,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ProfessorDashboard from "./pages/ProfessorDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 import NotFound from "./pages/NotFound";
+import AdminSetup from "./pages/AdminSetup";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
               } 
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/admin-setup" element={<AdminSetup />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

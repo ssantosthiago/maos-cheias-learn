@@ -1,1 +1,7 @@
 project_id = "ippimoepciqlmlxigvja"
+
+[functions.create-superadmin]
+verify_jwt = false
+
+[functions.superadmin-status]
+verify_jwt = false
