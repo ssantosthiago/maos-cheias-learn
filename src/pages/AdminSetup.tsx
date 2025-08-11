@@ -82,7 +82,9 @@ const AdminSetup = () => {
       const { data, error } = await supabase.functions.invoke('create-superadmin', {
         body: { email, password, full_name: fullName || undefined },
       });
-      if (error) throw error;
+      if (error) {
+        throw new Error((data as any)?.error || error.message || 'Falha ao criar superadmin');
+      }
       toast({ title: 'Superadmin criado!', description: 'Fazendo login...' });
       // Efetua login automaticamente
       const { error: signInError } = await signIn(email, password);

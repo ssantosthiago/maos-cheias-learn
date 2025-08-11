@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.53.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,10 +77,10 @@ serve(async (req) => {
       )
     }
 
-    // Check if the user already exists by email
+    // Try to find existing user by email (best-effort)
     let targetUser: any = null
     try {
-      const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+      const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 2000 })
       if (listError) {
         console.error('Error listing users:', listError)
       } else {
@@ -96,23 +96,28 @@ serve(async (req) => {
         email,
         password,
         email_confirm: true,
-        user_metadata: {
-          full_name
-        }
+        user_metadata: { full_name }
       })
 
       if (createError) {
+        // If creation failed (e.g., user already exists), try to find the user again and proceed
         console.error('Error creating auth user:', createError)
-        return new Response(
-          JSON.stringify({ error: createError.message }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        try {
+          const { data: usersData, error: listAgainError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 2000 })
+          if (!listAgainError) {
+            targetUser = usersData?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase()) || null
           }
-        )
-      }
+        } catch (_) {}
 
-      targetUser = createdData?.user
+        if (!targetUser) {
+          return new Response(
+            JSON.stringify({ error: createError.message || 'Falha ao criar usuário administrador.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      } else {
+        targetUser = createdData?.user
+      }
     }
 
     if (!targetUser) {
@@ -123,7 +128,7 @@ serve(async (req) => {
       )
     }
 
-    // Ensure profile exists and has superadmin role (upsert for idempotency)
+    // Ensure profile exists and has superadmin role (idempotent)
     const { error: upsertError } = await supabaseAdmin
       .from('profiles')
       .upsert(
@@ -150,7 +155,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        message: 'Superadmin criado com sucesso',
+        message: 'Superadmin pronto com sucesso',
         user: { id: targetUser.id, email: targetUser.email }
       }),
       {
